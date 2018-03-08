@@ -1,0 +1,59 @@
+service: sls-heroes
+
+custom:
+  BUCKET: your-s3-bucket-name
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+  stage: dev
+  region: prefered-region-name #for example eu-central-1 
+  role: arn-of-your-IAM-role-here
+  # put arn of the role
+  memorySize: 3008
+  timeout: 240
+  environment:
+    BUCKET: ${self:custom.BUCKET}
+    # put bucket name
+
+package:
+  individually: true
+  exclude:
+       - makeVideo/**
+       - resizeImage/**
+       - getSignedUrl/**
+
+
+functions:
+  getSignedUrl:
+    handler: getSignedUrl/handler.getSignedUrl
+    package:
+        include:
+            - getSignedUrl/**
+    events:
+      - http:
+          path: get-signed-url
+          method: get
+
+  resize:
+    handler: resizeImage/handler.resizeImage
+    package:
+        include:
+            - resizeImage/**
+    events:
+          - s3:
+              bucket: ${self:custom.BUCKET}
+              event: s3:ObjectCreated:*
+              rules:
+                - prefix: uploaded/
+                - suffix: .jpg
+
+  makeVideo:
+    handler: makeVideo/handler.makeVideo
+    package:
+        include:
+            - makeVideo/**
+    events:
+      - http:
+          path: make-video
+          method: get
